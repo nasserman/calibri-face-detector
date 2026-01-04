@@ -1,38 +1,23 @@
-import torch
+import cv2
 import numpy as np
-from facenet_pytorch import InceptionResnetV1
-from torchvision import transforms
-
-device = "cuda" if torch.cuda.is_available() else "cpu"
-
-# مدل FaceNet
-model = InceptionResnetV1(pretrained="vggface2").eval().to(device)
-
-# پیش‌پردازش
-transform = transforms.Compose([
-    transforms.Resize((160, 160)),
-    transforms.ToTensor(),
-    transforms.Normalize([0.5], [0.5])
-])
+import torch
 
 
-def extract_embedding(image):
-    """
-    image: PIL Image
-    خروجی: numpy array با shape=(512,) و L2-normalized
-    """
-    img = transform(image).unsqueeze(0).to(device)
+def extract_embedding(face_bgr, facenet_model):
+    face = cv2.cvtColor(face_bgr, cv2.COLOR_BGR2RGB)
+    face = cv2.resize(face, (160, 160))
+
+    face = face.astype(np.float32) / 255.0
+    face = np.transpose(face, (2, 0, 1))
+    face = np.expand_dims(face, axis=0)
+
+    tensor = torch.from_numpy(face)
+    device = next(facenet_model.parameters()).device
+    tensor = tensor.to(device)
 
     with torch.no_grad():
-        embedding = model(img)
+        emb = facenet_model(tensor)
 
-    # تبدیل به numpy
-    emb = embedding.cpu().numpy().flatten()
-
-    # L2 normalization (خیلی مهم برای دقت)
-    norm = np.linalg.norm(emb)
-    if norm == 0:
-        return emb
-
-    emb = emb / norm
+    emb = emb.cpu().numpy().flatten()
+    emb = emb / np.linalg.norm(emb)
     return emb

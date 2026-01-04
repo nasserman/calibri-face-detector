@@ -1,34 +1,31 @@
-import numpy as np
-from app.database import SessionLocal
+from sqlalchemy.orm import Session
 from app.models import FaceEmbedding
+import numpy as np
 
 
-def save_embedding(student_id: str, embedding: np.ndarray):
-    db = SessionLocal()
+def get_next_person_id(db: Session):
+    last = db.query(FaceEmbedding).order_by(FaceEmbedding.person_id.desc()).first()
+    return 0 if last is None else last.person_id + 1
 
-    emb_bytes = embedding.astype(np.float32).tobytes()
 
-    record = FaceEmbedding(
-        student_id=student_id,
-        embedding=emb_bytes
-    )
+def save_embeddings(db: Session, embeddings: list):
+    person_id = get_next_person_id(db)
 
-    db.add(record)
+    for emb in embeddings:
+        rec = FaceEmbedding(person_id=person_id)
+        rec.set_embedding(emb)
+        db.add(rec)
+
     db.commit()
-    db.close()
+    return person_id
 
 
-def get_all_embeddings():
-    db = SessionLocal()
+def load_all_embeddings(db: Session):
     records = db.query(FaceEmbedding).all()
 
-    results = []
+    embs, ids = [], []
     for r in records:
-        emb = np.frombuffer(r.embedding, dtype=np.float32)
-        results.append({
-            "student_id": r.student_id,
-            "embedding": emb
-        })
+        embs.append(r.get_embedding())
+        ids.append(r.person_id)
 
-    db.close()
-    return results
+    return np.array(embs), ids

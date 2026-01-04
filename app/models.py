@@ -1,10 +1,17 @@
-from sqlalchemy import Column, Integer, String, LargeBinary
+from sqlalchemy import Column, Integer, LargeBinary
 from app.database import Base
+import pickle
 
 
 class FaceEmbedding(Base):
     __tablename__ = "face_embeddings"
 
-    id = Column(Integer, primary_key=True, index=True)
-    student_id = Column(String, index=True, nullable=False)
-    embedding = Column(LargeBinary, nullable=False)
+    id = Column(Integer, primary_key=True)
+    person_id = Column(Integer, index=True)
+    embedding = Column(LargeBinary)
+
+    def set_embedding(self, emb):
+        self.embedding = pickle.dumps(emb)
+
+    def get_embedding(self):
+        return pickle.loads(self.embedding)
