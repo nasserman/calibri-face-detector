@@ -63,3 +63,5 @@ async def recognize_student(file: UploadFile = File(...)):
         "student_id": student_id,
         "confidence": float(score)
     }
+
+
