@@ -65,3 +65,4 @@ async def recognize_student(file: UploadFile = File(...)):
     }
 
 
+# some changes
