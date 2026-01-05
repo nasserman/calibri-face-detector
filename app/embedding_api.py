@@ -1,16 +1,15 @@
 from fastapi import APIRouter, UploadFile, File, Depends
-import cv2
-import numpy as np
-import torch
-
 from sqlalchemy.orm import Session
-from app.database import SessionLocal
-from app.models_loader import yolo_model, facenet_model
-from app.feature import extract_embedding
-from app.crud import save_embedding
+import cv2, torch
+import numpy as np
+
+from database import SessionLocal
+from models_loader import yolo_model, facenet_model
+from feature import extract_embedding
+from crud import add_embedding
+from svm_utils import train_svm
 
 router = APIRouter()
-
 
 def get_db():
     db = SessionLocal()
@@ -19,26 +18,37 @@ def get_db():
     finally:
         db.close()
 
-
-@router.post("/register")
-async def register_face(
-    student_id: str,
-    file: UploadFile = File(...),
+@router.post("/face/register")
+async def register_faces(
+    files: list[UploadFile] = File(...),
     db: Session = Depends(get_db)
 ):
-    img_bytes = await file.read()
-    img = cv2.imdecode(np.frombuffer(img_bytes, np.uint8), cv2.IMREAD_COLOR)
+    for file in files:
+        label = file.filename.split(".")[0]  # ⭐ آیدی = اسم فایل
 
-    results = yolo_model(img, verbose=False)
-    boxes = results[0].boxes
+        img = cv2.imdecode(
+            np.frombuffer(await file.read(), np.uint8),
+            cv2.IMREAD_COLOR
+        )
 
-    if boxes is None or len(boxes) == 0:
-        return {"error": "No face detected"}
+        results = yolo_model(img, verbose=False)
+        boxes = results[0].boxes
 
-    x1, y1, x2, y2 = map(int, boxes[0].xyxy[0])
-    face = img[y1:y2, x1:x2]
+        for box in boxes:
+            x1, y1, x2, y2 = map(int, box.xyxy[0])
+            face = img[y1:y2, x1:x2]
+            if face.size == 0:
+                continue
 
-    embedding = extract_embedding(face, facenet_model)
-    save_embedding(db, student_id, embedding)
+            face = cv2.cvtColor(face, cv2.COLOR_BGR2RGB)
+            face = cv2.resize(face, (160, 160))
 
-    return {"status": "registered", "student_id": student_id}
+            tensor = torch.tensor(face).permute(2,0,1).float().unsqueeze(0)/255
+            tensor = tensor.to(facenet_model.device)
+
+            emb = extract_embedding(tensor, facenet_model)
+            add_embedding(db, label, emb)
+
+    train_svm(db)
+
+    return {"status": "registered"}

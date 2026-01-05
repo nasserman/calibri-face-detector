@@ -1,14 +1,11 @@
 import numpy as np
+from svm_utils import load_svm
 
+def recognize_face(embedding):
+    svm = load_svm()
 
-def recognize_face(query_emb, db_embs, db_ids, threshold=0.9):
-    if len(db_embs) == 0:
-        return None, None
+    proba = svm.predict_proba([embedding])[0]
+    pred = svm.classes_[np.argmax(proba)]
+    confidence = float(np.max(proba))
 
-    dists = np.linalg.norm(db_embs - query_emb, axis=1)
-    idx = np.argmin(dists)
-
-    if dists[idx] < threshold:
-        return db_ids[idx], float(dists[idx])
-
-    return None, float(dists[idx])
+    return pred, confidence
