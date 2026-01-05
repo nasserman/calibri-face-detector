@@ -2,9 +2,10 @@ from fastapi import APIRouter, UploadFile, File
 import cv2, torch
 import numpy as np
 
-from models_loader import yolo_model, facenet_model
-from feature import extract_embedding
-from recognition import recognize_face
+from app.models_loader import yolo_model, facenet_model
+from app.feature import extract_embedding
+from app.recognition import recognize_face
+from app.models_loader import device
 
 router = APIRouter()
 
@@ -28,8 +29,7 @@ async def recognize(file: UploadFile = File(...)):
     face = cv2.cvtColor(face, cv2.COLOR_BGR2RGB)
     face = cv2.resize(face, (160,160))
 
-    tensor = torch.tensor(face).permute(2,0,1).float().unsqueeze(0)/255
-    tensor = tensor.to(facenet_model.device)
+    tensor = (torch.tensor(face).permute(2, 0, 1).float().unsqueeze(0).div(255.0).to(device))
 
     emb = extract_embedding(tensor, facenet_model)
 

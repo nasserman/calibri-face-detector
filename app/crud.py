@@ -1,6 +1,6 @@
 import numpy as np
 from sqlalchemy.orm import Session
-from models import FaceEmbedding
+from app.models import FaceEmbedding
 
 def add_embedding(db: Session, label: str, embedding: np.ndarray):
     record = FaceEmbedding(

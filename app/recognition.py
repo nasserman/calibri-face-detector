@@ -1,5 +1,5 @@
 import numpy as np
-from svm_utils import load_svm
+from app.svm_utils import load_svm
 
 def recognize_face(embedding):
     svm = load_svm()

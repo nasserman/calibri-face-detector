@@ -1,6 +1,6 @@
 import pickle
 from sklearn.svm import SVC
-from crud import load_all_embeddings
+from app.crud import load_all_embeddings
 
 MODEL_PATH = "app/svm_model.pkl"
 

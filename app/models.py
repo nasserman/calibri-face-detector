@@ -1,5 +1,5 @@
 from sqlalchemy import Column, Integer, String, LargeBinary
-from database import Base
+from app.database import Base
 
 class FaceEmbedding(Base):
     __tablename__ = "face_embeddings"

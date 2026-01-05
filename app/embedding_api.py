@@ -3,11 +3,12 @@ from sqlalchemy.orm import Session
 import cv2, torch
 import numpy as np
 
-from database import SessionLocal
-from models_loader import yolo_model, facenet_model
-from feature import extract_embedding
-from crud import add_embedding
-from svm_utils import train_svm
+from app.models_loader import device
+from app.models_loader import yolo_model, facenet_model
+from app.feature import extract_embedding
+from app.crud import add_embedding
+from app.svm_utils import train_svm
+from app.database import SessionLocal
 
 router = APIRouter()
 
@@ -24,7 +25,7 @@ async def register_faces(
     db: Session = Depends(get_db)
 ):
     for file in files:
-        label = file.filename.split(".")[0]  # ⭐ آیدی = اسم فایل
+        label = file.filename.split(".")[0]  #  آیدی = اسم فایل
 
         img = cv2.imdecode(
             np.frombuffer(await file.read(), np.uint8),
@@ -43,8 +44,9 @@ async def register_faces(
             face = cv2.cvtColor(face, cv2.COLOR_BGR2RGB)
             face = cv2.resize(face, (160, 160))
 
-            tensor = torch.tensor(face).permute(2,0,1).float().unsqueeze(0)/255
-            tensor = tensor.to(facenet_model.device)
+            tensor = (
+            torch.tensor(face).permute(2, 0, 1).float().unsqueeze(0).div(255.0).to(device))
+
 
             emb = extract_embedding(tensor, facenet_model)
             add_embedding(db, label, emb)
